@@ -1,0 +1,41 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Matches - FINAL LIVE+DEMO</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body style="background:#080c14;color:#e2e8f0;font-family:monospace;padding:12px">
+<div style="max-width:900px;margin:auto;background:#111a2b;padding:12px 16px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;border:1px solid #1e293b">
+<div><b style="color:#22d3ee">MY MATCHES</b><span style="font-size:10px;color:#666;margin-left:8px">APP 1089 | AUTO LIVE/DEMO</span></div>
+<div id="status" style="background:#1a2a44;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:bold">CHECKING...</div>
+</div>
+
+<div style="max-width:900px;margin:14px auto;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<div style="background:#111a2b;padding:20px;border-radius:12px;text-align:center;border:1px solid #1e293b"><div style="font-size:10px;color:#888">MORERUNS - TRADE THIS DIGIT</div><div id="moreruns" style="font-size:56px;color:#fb7185;font-weight:bold">-</div><div style="font-size:10px;color:#555">Saved to localStorage.Moreruns</div></div>
+<div style="background:#111a2b;padding:20px;border-radius:12px;text-align:center;border:1px solid #1e293b"><div style="font-size:10px;color:#888">MATCHVISION - CONFIDENCE</div><div id="matchvision" style="font-size:56px;color:#22d3ee;font-weight:bold">0%</div><div id="count" style="font-size:10px;color:#555">0/100 ticks</div></div>
+</div>
+
+<div style="max-width:900px;margin:auto;background:#111a2b;padding:10px;border-radius:10px;font-size:10px;color:#888;display:flex;justify-content:space-between">
+<div>Market: <b style="color:#e2e8f0" id="bestMarket">R_10_1s (Best)</b> | Last: <span id="last">-</span></div><div id="modeInfo">-</div>
+</div>
+
+<div id="grid" style="max-width:900px;margin:12px auto;display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>
+
+<div style="max-width:900px;margin:auto;background:#052e16;border:1px solid #166534;padding:10px;border-radius:8px;font-size:10px;color:#4ade80;text-align:center" id="botInfo">Bot can read: localStorage.getItem('Moreruns') = <b id="botVal">-</b></div>
+
+<script>
+const APP_ID_TICKS = 1089;
+const MARKETS = ['R_10','R_25','R_50','R_75','R_10_1s','R_25_1s','R_50_1s','R_75_1s','R_100_1s','R_100'];
+let STATE = {}; MARKETS.forEach(m=>STATE[m]={ticks:[],counts:Array(10).fill(0),last:null,conf:0});
+let current='R_10_1s'; let isLive=false; let fakeTimer=null;
+
+function initGrid(){const g=document.getElementById('grid'); g.innerHTML=''; MARKETS.forEach(id=>{const d=document.createElement('div'); d.id='card-'+id; d.style='background:#111a2b;padding:10px;border-radius:8px;border:1px solid #1e293b;text-align:center'; d.innerHTML=`<div style="font-size:8px;color:#666">${id}</div><div style="font-size:20px;font-weight:bold" id="d-${id}">-</div><div style="font-size:8px;color:#555" id="c-${id}">0/100</div>`; g.appendChild(d);});}
+
+function calc(id){const s=STATE[id]; if(s.ticks.length<100) return; let min=0,mv=s.counts[0]; for(let i=1;i<10;i++) if(s.counts[i]<mv){mv=s.counts[i]; min=i;} let conf=Math.round((1-mv/s.ticks.length)*100); s.conf=conf; document.getElementById('d-'+id).textContent=min; document.getElementById('c-'+id).textContent=conf+'%'; const card=document.getElementById('card-'+id); card.style.borderColor = conf>70 ? '#22d3ee' : '#1e293b'; if(id===current){document.getElementById('moreruns').textContent=min; document.getElementById('matchvision').textContent=conf+'%'; document.getElementById('count').textContent=conf+'% • '+s.ticks.length+' ticks'; document.getElementById('botVal').textContent=min+' ('+conf+'%)'; localStorage.setItem('Moreruns',min); localStorage.setItem('Matchvision',min); localStorage.setItem('Confidence',conf);} }
+
+function addTick(id,quote){const d=Math.abs(Math.floor(quote*100)%10); const s=STATE[id]; s.ticks.push(d); if(s.ticks.length>300) s.ticks.shift(); s.counts=Array(10).fill(0); s.ticks.forEach(x=>s.counts[x]++); s.last=d; if(id===current) document.getElementById('last').textContent=quote.toFixed(2)+' -> digit '+d; calc(id);}
+
+function startDemo(reason){if(fakeTimer) return; isLive=false; document.getElementById('status').textContent='DEMO MODE • '+reason; document.getElementById('status').style='background:#422006;color:#fbbf24;padding:6px 14px;border-radius:20px;font-size:11px'; document.getElementById('modeInfo').textContent='DEMO - Same logic, fake ticks - Good for bot test'; document.getElementById('bestMarket').textContent='DEMO - Testing Bot'; fakeTimer=setInterval(()=>{MARKETS.forEach(m=>{addTick(m, Math.random()*1000+500)});},400);}
+
+function connectLive(){const hosts=['ws.derivws.com','ws.binaryws.com']; let h=0; function tryHost(){let url=`wss://${hosts[h]}/websockets/v3?app_id=${APP_ID_TICKS}`; document.getElementById('status').textContent=`CONNECTING LIVE... ${hosts[h]}`; let ws=new WebSocket(url); let timeout=setTimeout(()=>{ws.close();},5000); ws.onopen=()=>{clearTimeout(timeout); isLive=true; document.getElementById('status').textContent='LIVE • CONNECTED - REAL MARKET'; document.getElementById('status').style='background:#052e16;color:#4ade80;border:1px solid #166534;padding:6px 14px;border-radius:20px;font-size:11px'; document.getElementById('modeInfo').textContent='LIVE REAL TICKS - Use for real money'; if(fakeTimer){clearInterval(fakeTimer); fakeTimer=null;} MARKETS.forEach(m=>ws.send(JSON.stringify({ticks:m,subscribe:1})));}; ws.onmessage=e=>{try{let data=JSON.parse(e.data); if(data.tick){let sym=data.echo_req?.ticks || data.tick.symbol || 'R_10_1s'; if(STATE[sym]) addTick(sym,data.tick.quote);}}catch{}}; ws.onclose=()=>{clearTimeout(timeout); if(!isLive){h=(h+1)%hosts.length; if(h==0){startDemo('GitHub blocked - Auto DEMO');} else {setTimeout(tryHost,2000);}} else {document.getElementById('status').textContent='RECONNECTING LIVE...'; setTimeout(tryHost,3000);}}; ws.onerror=()=>{clearTimeout(timeout); ws.close();};} tryHost();}
+
+initGrid();
+connectLive();
+setTimeout(()=>{if(!isLive) startDemo('Slow net - Auto DEMO 93%');},6000);
+</script></body></html>
